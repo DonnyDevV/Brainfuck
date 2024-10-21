@@ -1,8 +1,9 @@
+#include <cstdio>
 #include <getopt.h>
+#include <iostream>
 #include <stdexcept>
 #include <vector>
 
-const size_t MAX_PROGRAM_SIZE = 30000;
 const size_t BUFFER_SIZE = 4096;
 
 bool print_bytecode = false;
@@ -68,6 +69,60 @@ class TwoEndedTape {
     size_t get_Pointer() { return position - TAPE_SIZE; }
 };
 
+enum class OpCode { MV_RIGHT, MV_LEFT, INC_VAL, DEC_VAL, OUTPUT, INPUT, JUMP_FWD, JUMP_BACK };
+
+struct Instruction {
+    OpCode op;
+    int value;
+};
+
+class Compiler {
+  public:
+    std::vector<Instruction> compile(std::vector<unsigned char> ops) {}
+};
+
+class Interpreter {
+  private:
+    TwoEndedTape tape;
+
+  public:
+    void interprete(const std::vector<Instruction> &bytecode) {
+        for (size_t pc; pc < bytecode.size(); ++pc) {
+            const Instruction &instr = bytecode[pc];
+            switch (instr.op) {
+            case OpCode::OUTPUT:
+                std::cout.put(tape.get_curr());
+                break;
+            case OpCode::INPUT:
+                tape.set_curr(std::cin.get());
+                break;
+            case OpCode::DEC_VAL:
+                tape.decrement();
+                break;
+            case OpCode::INC_VAL:
+                tape.increment();
+                break;
+            case OpCode::MV_LEFT:
+                tape.moveLeft();
+                break;
+            case OpCode::MV_RIGHT:
+                tape.moveRight();
+                break;
+            case OpCode::JUMP_FWD:
+                if (tape.get_curr() == 0) {
+                    pc = instr.value;
+                };
+                break;
+            case OpCode::JUMP_BACK:
+                if (tape.get_curr() != 0) {
+                    pc = instr.value;
+                };
+                break;
+            }
+        }
+    }
+};
+
 std::vector<unsigned char> read_program(FILE *stream) {
     std::vector<unsigned char> program;
     unsigned char buffer[BUFFER_SIZE];
@@ -105,10 +160,18 @@ int main(int argc, char *argv[]) {
     }
 
     std::vector<unsigned char> ops = read_program(input_stream);
-    TwoEndedTape tape;
 
     if (input_stream != stdin) {
         fclose(input_stream);
+    }
+    Compiler compiler;
+    std::vector<Instruction> &bytecode = compiler.compile(ops);
+
+    if (print_bytecode) {
+        print_bytecode(bytecode);
+    } else {
+        Interpreter interpreter;
+        interpreter.interprete(bytecode);
     }
 
     return 0;
