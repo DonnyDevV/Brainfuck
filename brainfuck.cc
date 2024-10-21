@@ -1,14 +1,13 @@
 #include <cstdio>
 #include <getopt.h>
 #include <iostream>
+#include <stack>
 #include <stdexcept>
 #include <vector>
 
 const size_t BUFFER_SIZE = 4096;
 
-bool print_bytecode = false;
 const char *input_file = nullptr;
-FILE *input_stream = nullptr;
 
 class TwoEndedTape {
   private:
@@ -73,12 +72,50 @@ enum class OpCode { MV_RIGHT, MV_LEFT, INC_VAL, DEC_VAL, OUTPUT, INPUT, JUMP_FWD
 
 struct Instruction {
     OpCode op;
-    int value;
+    size_t jump_ref;
 };
 
 class Compiler {
   public:
-    std::vector<Instruction> compile(std::vector<unsigned char> ops) {}
+    std::vector<Instruction> compile(const std::vector<unsigned char> &ops) {
+        std::vector<Instruction> bytecode;
+        std::stack<size_t> loop_stack;
+
+        for (unsigned char op : ops) {
+            switch (op) {
+            case '.':
+                bytecode.push_back({OpCode::OUTPUT, 0});
+                break;
+            case ',':
+                bytecode.push_back({OpCode::INPUT, 0});
+                break;
+            case '-':
+                bytecode.push_back({OpCode::DEC_VAL, 0});
+                break;
+            case '+':
+                bytecode.push_back({OpCode::INC_VAL, 0});
+                break;
+            case '<':
+                bytecode.push_back({OpCode::MV_LEFT, 0});
+                break;
+            case '>':
+                bytecode.push_back({OpCode::MV_RIGHT, 0});
+                break;
+            case '[':
+                loop_stack.push(bytecode.size());
+                bytecode.push_back({OpCode::JUMP_FWD, 0});
+                break;
+            case ']':
+                if (!loop_stack.empty()) { // Don't throw an error here
+                    bytecode[loop_stack.top()].jump_ref = bytecode.size();
+                    bytecode.push_back({OpCode::JUMP_BACK, loop_stack.top()});
+                    loop_stack.pop();
+                }
+                break;
+            }
+        }
+        return bytecode;
+    }
 };
 
 class Interpreter {
@@ -110,12 +147,12 @@ class Interpreter {
                 break;
             case OpCode::JUMP_FWD:
                 if (tape.get_curr() == 0) {
-                    pc = instr.value;
+                    pc = instr.jump_ref;
                 };
                 break;
             case OpCode::JUMP_BACK:
                 if (tape.get_curr() != 0) {
-                    pc = instr.value;
+                    pc = instr.jump_ref;
                 };
                 break;
             }
@@ -135,12 +172,21 @@ std::vector<unsigned char> read_program(FILE *stream) {
     return program;
 }
 
+void print_bytecode(const std::vector<Instruction> &bytecode) {
+    for (const Instruction &instr : bytecode) {
+        std::cout.put(static_cast<int>(instr.op));
+    }
+}
+
 int main(int argc, char *argv[]) {
     int opt;
+    FILE *input_stream = nullptr;
+    bool should_print_bytecode = false;
+
     while ((opt = getopt(argc, argv, "c")) != -1) {
         switch (opt) {
         case 'c':
-            print_bytecode = true;
+            should_print_bytecode = true;
             break;
         default:
             fprintf(stderr, "Usage: %s [-c] program_file\n", argv[0]);
@@ -165,9 +211,9 @@ int main(int argc, char *argv[]) {
         fclose(input_stream);
     }
     Compiler compiler;
-    std::vector<Instruction> &bytecode = compiler.compile(ops);
+    std::vector<Instruction> bytecode = compiler.compile(ops);
 
-    if (print_bytecode) {
+    if (should_print_bytecode) {
         print_bytecode(bytecode);
     } else {
         Interpreter interpreter;
