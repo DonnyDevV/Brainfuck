@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <cstdio>
 #include <getopt.h>
 #include <iostream>
@@ -68,7 +69,7 @@ class TwoEndedTape {
     size_t get_Pointer() { return position - TAPE_SIZE; }
 };
 
-enum class OpCode { MV_RIGHT, MV_LEFT, INC_VAL, DEC_VAL, OUTPUT, INPUT, JUMP_FWD, JUMP_BACK };
+enum class OpCode : uint8_t { MV_RIGHT, MV_LEFT, INC_VAL, DEC_VAL, OUTPUT, INPUT, JUMP_FWD, JUMP_BACK };
 
 struct Instruction {
     OpCode op;
@@ -124,11 +125,11 @@ class Interpreter {
 
   public:
     void interprete(const std::vector<Instruction> &bytecode) {
-        for (size_t pc; pc < bytecode.size(); ++pc) {
+        for (size_t pc = 0; pc < bytecode.size(); ++pc) {
             const Instruction &instr = bytecode[pc];
             switch (instr.op) {
             case OpCode::OUTPUT:
-                std::cout.put(tape.get_curr());
+                putchar(tape.get_curr());
                 break;
             case OpCode::INPUT:
                 tape.set_curr(std::cin.get());
@@ -174,7 +175,7 @@ std::vector<unsigned char> read_program(FILE *stream) {
 
 void print_bytecode(const std::vector<Instruction> &bytecode) {
     for (const Instruction &instr : bytecode) {
-        std::cout.put(static_cast<int>(instr.op));
+        putchar(static_cast<uint8_t>(instr.op));
     }
 }
 
