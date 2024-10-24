@@ -4,19 +4,20 @@ Hanoi
 
 1. Compile-time vs run-time optimization tradeoff
 No-Opt: Just coding a working solution that passes the tests, no threaded code (switch based instead) or pattern
-detection, but without trees or so TTI: TokenThreadingInterpreter instead of switch interpreter -> performed generally
-worse than switch, maybe because of function overhead, maybe skill issue DTI: DirectThreadingInterpreter instead switch
-interpreter -> performed better for mandelbrot than switch, slightly worse on non-optimized Hanoi Threaded Coding on the
-Compiler/Parser instead of switch based approach, didn't improve the execution time for me, probably because the input
-program is too small to be worth the effort DTI + Patterns: I added e.g. Set Zero Pattern which gave roughly 0.5 s
-improvement for mandelbrot but a huge improvement for the hanoi program (over 5s) and 0.03s for hanoi_opt; ADD_VAL
-instead of incrementing/decrementing and MOV_POS instead of moving only by one to the left or right. These two gave huge
-improvements (3s for mandelbrot, 3s for Hanoi, 0.05s for Hanoi_opt). Then I added the add to next pattern, multiply
-pattern, and set value pattern These three didnt really bring any noticeable performance boots (if not worse) for me. It
-is a trade of for more intensive compiling and searching for patterns during parsings and exploiting created
-superinstructions in the interpretation phase.
-I also tried inlining the tape methods and data to the interpreter but it didn't make a significant difference and
-therefore I reverted for better readability
+detection, but without trees or so TTI: TokenThreadingInterpreter (with function pointers) instead of switch interpreter
+-> performed generally worse than switch, maybe because of function overhead, maybe skill issue DTI:
+DirectThreadingInterpreter (I realised this is rather called also a Token Threading Interpreter just with label
+addresses and using opcode index addresses but we still have an extra lookup instead of single memory lookup) instead of
+Direct Threading  instead switch interpreter -> performed better for mandelbrot than switch, slightly worse on
+non-optimized Hanoi Threaded Coding on the Compiler/Parser instead of switch based approach, didn't improve the
+execution time for me, probably because the input program is too small to be worth the effort DTI + Patterns: I added
+e.g. Set Zero Pattern which gave roughly 0.5 s improvement for mandelbrot but a huge improvement for the hanoi program
+(over 5s) and 0.03s for hanoi_opt; ADD_VAL instead of incrementing/decrementing and MOV_POS instead of moving only by
+one to the left or right. These two gave huge improvements (3s for mandelbrot, 3s for Hanoi, 0.05s for Hanoi_opt). Then
+I added the add to next pattern, multiply pattern, and set value pattern These three didnt really bring any noticeable
+performance boots (if not worse) for me. It is a trade of for more intensive compiling and searching for patterns during
+parsings and exploiting created superinstructions in the interpretation phase. I also tried inlining the tape methods
+and data to the interpreter but it didn't make a significant difference and therefore I reverted for better readability
 
  Execution Time (seconds):
 Program      | No-Opt  |   TTI    |    DTI    |   DTI + Patterns  |     Speedup
@@ -504,7 +505,7 @@ int main(int argc, char *argv[]) {
 //      }
 //  };
 
-// TOKEN THREADING INTERPRETER VERSION
+// TOKEN THREADING WITH FUNCTION POINTERS INTERPRETER VERSION
 // class TokenThreadingInterpreter {
 //   private:
 //     TwoEndedTape tape;
