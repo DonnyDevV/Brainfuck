@@ -219,20 +219,13 @@ class DirectThreadingCompiler {
 
   public:
     std::vector<Instruction> compile(const std::vector<unsigned char> &ops) {
-        static void *dispatch_table[256];
-        for (int i = 0; i < 256; i++) {
-            dispatch_table[i] = &&parse_unknown;
-        }
-
-        dispatch_table['>'] = &&parse_mv_right;
-        dispatch_table['<'] = &&parse_mv_left;
-        dispatch_table['+'] = &&parse_inc_val;
-        dispatch_table['-'] = &&parse_dec_val;
-        dispatch_table['.'] = &&parse_output;
-        dispatch_table[','] = &&parse_input;
-        dispatch_table['['] = &&parse_jmp_fwd;
-        dispatch_table[']'] = &&parse_jmp_back;
-
+        static const void *dispatch_table[] = {
+            [0 ... 255] = &&parse_unknown,          dispatch_table['>'] = &&parse_mv_right,
+            dispatch_table['<'] = &&parse_mv_left,  dispatch_table['+'] = &&parse_inc_val,
+            dispatch_table['-'] = &&parse_dec_val,  dispatch_table['.'] = &&parse_output,
+            dispatch_table[','] = &&parse_input,    dispatch_table['['] = &&parse_jmp_fwd,
+            dispatch_table[']'] = &&parse_jmp_back,
+        };
         std::vector<Instruction> bytecode;
         std::stack<size_t> loop_stack;
         size_t i = 0;
@@ -322,14 +315,16 @@ class DirectThreadingInterpreter {
 
   public:
     void interprete(const std::vector<Instruction> &bytecode) {
+        if (bytecode.empty())
+            return;
+
         static void *dispatch_table[] = {&&do_output,      &&do_input,   &&do_jmp_fwd,    &&do_jmp_back,
                                          &&do_set_zero,    &&do_add_val, &&do_mv_pos,     &&do_add_to_next,
                                          &&do_multiply_mv, &&do_set_val, &&do_scan_right, &&do_scan_left};
         size_t pc = 0;
 #define DISPATCH goto *dispatch_table[static_cast<int>(bytecode[pc].op)]
 #define NEXT                                                                                                           \
-    ++pc;                                                                                                              \
-    if (pc < bytecode.size())                                                                                          \
+    if (++pc < bytecode.size())                                                                                        \
         DISPATCH;                                                                                                      \
     return;
 
